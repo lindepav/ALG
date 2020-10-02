@@ -3,15 +3,39 @@
 #include <assert.h>
 #include <time.h>
 #include <math.h>
-#include <stdbool.h> 
+#include <dirent.h> 
+
+#define MIN(a,b) (((a)<(b))?(a):(b))
+#define MAX(a,b) (((a)>(b))?(a):(b))
 
 void binary_search_test();
-int binary_search(int arr[], int from, int to, int d, int last);
-int* linear_search(int arr[], int from, int to, int first, int W_pow, int D);
+int binary_search(int arr[], long from, long to, int d, int last);
+long linear_search(int arr[], long from, long to, long W_pow, int D, int top_val);
+long* find_crosses(int arr[], long from, long to, long W_pow, int D, int top_val);
 long count_possible_routes(int arr[], int N, int D);
 long count_cross_routes(int s1[], int s2[], int N1, int N2, int D, int W);
 void read_vector(int N, int s[]);
 void print_riverside(int s[], char name[], int N);
+void public_tests();
+
+void public_tests() {
+    DIR *d;
+    struct dirent *dir;
+    d = opendir("datapub/");
+    char **filenames = malloc(10 * sizeof(char *));
+    if (d) {
+        int i = 0;
+        while ((dir = readdir(d)) != NULL) {
+            printf("%d\n", i/2);
+            if (i % 2 == 0) 
+                filenames[i/2] = dir->d_name;
+            i++;
+        }
+        closedir(d);
+    }
+    for(int i=0; i<10; i++)
+        printf("%s", filenames[i]);
+}
 
 void print_riverside(int s[], char name[], int N) {
     printf("%s = { ", name);
@@ -57,7 +81,7 @@ void read_vector(int N,  int s[]) {
     return;
 }
 
-int binary_search(int arr[], int from, int to, int d, int last) { 
+int binary_search(int arr[], long from, long to, int d, int last) { 
     if (to >= from) { 
         int mid = from + (to - from) / 2; 
   
@@ -87,53 +111,60 @@ long count_possible_routes(int arr[], int N, int D) {
     return count;
 }
 
-int* linear_search(int arr[], int from, int to, int first, int W_pow, int D) { 
-    int first_idx = -1;
-    int last_idx = -1;
-    for(int i=from; i<to; i++) {
-        int current_val = arr[i];
-        int dif = first - current_val;
-        float d = sqrt(W_pow + dif * dif);
-        if(d <= D) {
-            from = i;
-            first_idx = i;
-            break;
+long linear_search(int arr[], long from, long to, long W_pow, int D, int top_val) { 
+    //printf("linear search from %ld to %ld: \n", from, to);
+    if(from < to) {
+        for(long i=from; i<=to; i++) {
+            long current_val = arr[i];
+            long dif = current_val - top_val; //TODO: odebrat ABS
+            float d = sqrt(W_pow + dif * dif);
+            //printf("\t current d: %.2f for s1[i]: %d\n", d, top_val);
+            if(d <= D) 
+                return i;
+        }
+    } else {
+        for(long i=from; i>=to; i--) {
+            long current_val = arr[i];
+            long dif = current_val - top_val; //TODO: odebrat ABS
+            float d = sqrt(W_pow + dif * dif);
+            //printf("\t current d: %.2f for s1[i]: %d\n", d, top_val);
+            if(d <= D) 
+                return i;
         }
     }
-    while(from <= to) {
-        int mid = from + (to - from) / 2;
-        int current_val = arr[mid];
-        int dif = first - current_val;
-        float d = sqrt(W_pow + dif * dif);
-        if(d == D) {
-            last_idx = mid;
-            break;
-        }
-        if(d < D) {
-            from = mid + 1;
-            last_idx = mid;
-        } else {
-            to = mid - 1;
-        }
-    }
-    int *ret = malloc(2 * sizeof(int));
-    ret[0] = first_idx;
-    ret[1] = last_idx;
-    return ret;
+    return (long)-1;
 }  
 
+long* find_crosses(int arr[], long from, long to, long W_pow, int D, int top_val) {
+    long new_from = linear_search(arr, from, to, W_pow, D, top_val);
+    if(new_from < 0) {
+        return NULL;
+    }
+        
+    to = linear_search(arr, to, from, W_pow, D, top_val);
+    long *ret = malloc(2 * sizeof(long));
+    ret[0] = new_from;
+    ret[1] = to;
+    return ret;
+}
+
 long count_cross_routes(int s1[], int s2[], int N1, int N2, int D, int W) {
-    register int i = 0, j = 0;
+    register long i = 0, j_from = 0, j_to = 0;
     long count = 0;
-    W = pow(W, 2);
-    while(i < N1 && j < N2) {
+    long W_pow = pow(W, 2);
+    j_to = N2 - 1;
+    //printf("max initial difference is %d.\n", j_to);
+    while(i < N1 && j_from < N2) {
         int current_val = s1[i];
-        int *ret = linear_search(s2, j, N2 - 1, current_val, W, D);
-        if(ret[0] >= j) {
-            j = ret[0];
-            count = count + ret[1] - j + 1;
-            //printf("for %d is new count %d\n", current_val, ret[1] - j + 1);
-        } 
+        long *ret = find_crosses(s2, j_from, MIN(N2 - 1, j_to), W_pow, D, current_val);
+        if(ret == NULL) {
+            i++;
+            continue;
+        }
+        count = count + ret[1] - ret[0] + (long)1;
+        j_from = ret[0];
+        j_to = ret[1] + sqrt(D);
+        //printf("i=%ld --> %ld:%ld, count = %ld\n", i, j_from, ret[1], ret[1] - ret[0] + 1);
         i++;
     }
     return count;
@@ -161,7 +192,6 @@ int main(void) {
     /*printf("testing linear search...\n");
     long *ret = linear_search(s2, 0, N2, 7, W, D);
     printf("ret = {%d, %ld}\n", s2[ret[0]], ret[1]);*/
-
     //clock_t before = clock();
 
     long count1 = count_possible_routes(s1, N1, D);
