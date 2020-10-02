@@ -163,7 +163,7 @@ long count_cross_routes(int s1[], int s2[], int N1, int N2, int D, int W) {
         }
         count = count + ret[1] - ret[0] + (long)1;
         j_from = ret[0];
-        j_to = ret[1] + sqrt(D);
+        j_to = ret[1] + sqrt(D) + 3;
         //printf("i=%ld --> %ld:%ld, count = %ld\n", i, j_from, ret[1], ret[1] - ret[0] + 1);
         i++;
     }
