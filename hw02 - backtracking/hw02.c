@@ -27,7 +27,8 @@ void print_adjacent_list();
 void print_assigned_agents();
 
 void print_assigned_agents() {
-    printf("T1: ");
+    printf("-> Currently assigned agents:\n");
+    printf("\tT1: ");
     for(int i=0; i<A; i++) {
         if(i == A-1)
             printf("%d\n", assigned_T1[i]);
@@ -35,7 +36,7 @@ void print_assigned_agents() {
             printf("%d ", assigned_T1[i]);
     }
 
-    printf("T2: ");
+    printf("\tT2: ");
     for(int i=0; i<B; i++) {
         if(i == B-1)
             printf("%d\n", assigned_T2[i]);
@@ -45,10 +46,12 @@ void print_assigned_agents() {
 }
 
 void print_adjacent_list() {
+    printf("List of adjacent vertices:\n");
     for(int v=0; v<N; v++) {
         printf("%d: ", v+1);
         print_list(V[v].head);
     }
+    printf("-----------------------\n");
 }
 
 void print_list(AdjList *head) {
