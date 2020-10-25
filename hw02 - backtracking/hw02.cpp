@@ -19,8 +19,8 @@ int N, M, A, B, best_score;
 void add_edge(vector<int> adj[], int u, int v);
 void print_graph(vector<int> adj[], int N);
 void print_sorted_degrees(vector<pair<int,int> > a);
-void backtrack(int current_node, int current_score, int a_count, int b_count, bool *visited, vector<pair<int,int> > sorted, vector<int> *V, int *agent_types, int recursion_lvl);
-int get_score(int current_score, int current_node, bool *visited, vector<int> *V, int type, int *agent_types);
+void backtrack(int current_score, int a_count, int b_count, bool *visited, vector<pair<int,int> > sorted, vector<int> *V, int *agent_types, int recursion_lvl);
+int get_score(int current_node, bool *visited, vector<int> *V, int type, int *agent_types);
 int get_upper_bound(int a_count, int b_count, bool *visited, vector<pair<int,int> > sorted);
 void sort_vertices(vector<int> *V, int* degrees);
 
@@ -46,10 +46,10 @@ void print_sorted_degrees(vector<pair<int,int> > a) {
     }
 }
 
-int get_score(int current_score, int current_node, bool *visited, vector<int> *V, int type, int *agent_types) {
-    int reward_a[3] = {1, 0, 0}; 
-    int reward_b[3] = {0, 1, 0}; 
-    int diffs[3] = {1, -1, 0};
+int get_score(int current_node, bool *visited, vector<int> *V, int type, int *agent_types) {
+    int reward_a[3] = {0, 1, 0}; 
+    int reward_b[3] = {0, 0, 1}; 
+    int diffs[3] = {0, 1, -1};
     int new_count = 0;
     int dif = 0;
     
@@ -60,13 +60,8 @@ int get_score(int current_score, int current_node, bool *visited, vector<int> *V
         if(!visited[nidx]) {
             new_count = new_count + reward_b[type];
         } else {
-            if(ntype == 2) {
-                new_count = new_count + reward_b[type];
-            } else {
-                new_count = new_count + reward_a[type];
-                if(type == 0 || type == 1) 
-                    dif = dif + diffs[ntype];
-            }
+            new_count = new_count + reward_a[type];
+            dif = dif + diffs[ntype];
         }
     }
 
@@ -94,7 +89,7 @@ int get_upper_bound(int a_count, int b_count, bool *visited, vector<pair<int,int
     return sum;
 }
 
-void backtrack(int current_node, int current_score, int a_count, int b_count, bool *visited, vector<pair<int,int> > sorted, vector<int> *V, int *agent_types, int recursion_lvl) {
+void backtrack(int current_score, int a_count, int b_count, bool *visited, vector<pair<int,int> > sorted, vector<int> *V, int *agent_types, int recursion_lvl) {
     /* STOP CONDITION */
     if(a_count >= A && b_count >= B) {
         //printf(" --> STOP.");
@@ -107,44 +102,27 @@ void backtrack(int current_node, int current_score, int a_count, int b_count, bo
     /* PRUNING */
     int bound = get_upper_bound(a_count, b_count, visited, sorted);
     if(current_score + bound <= best_score) {
-        //printf(" Pruning for #%d %d %d", current_node+1, bound, current_score);
         return;
     }
 
-    // assign T1, T2, NULL and compute the best score
-    for(int type=0; type<3; type++) {
-        if(type == 0) {
-            if(a_count >= A)
-                continue;
-            a_count++;
-        } else if(type == 1) {
-            if(b_count >= B)
-                continue;
-            b_count++;
-        }
-        agent_types[current_node] = type;
-        int new_score = get_score(current_score, current_node, visited, V, type, agent_types);
-        //cout << "\n" << std::string(2*recursion_lvl, ' ')  << "#" << current_node+1 << "(T" << type+1 << "): " << current_score << " -> "<< new_score;
-        if(current_score + new_score > best_score)
-            best_score = current_score + new_score;
-
-        // select the best value in neighbours
-        vector<int> neighbours = V[current_node];   //TODO: muzu predavat rovnou tohle, uz se to opakuje
-        for(int nidx : neighbours) { 
-            if(!visited[nidx]) {
-                visited[nidx] = true;
-                backtrack(nidx, current_score + new_score, a_count, b_count, visited, sorted, V, agent_types, recursion_lvl+1);
-                visited[nidx] = false;
-
+    // assign agent types to nodes or not
+    for(pair<int, int> vertex : sorted) {
+        int current_node = vertex.second;
+        if(!visited[current_node]) {
+            for(int type=1; type<3; type++) {
+                agent_types[current_node] = type;
+                visited[current_node] = true;
+                int score = get_score(current_node, visited, V, type, agent_types);  //TODO: lze udelat optimalneji
+                //cout << "\n" << std::string(2*recursion_lvl, ' ')  << "#" << current_node+1 << "(T" << type << "): " << current_score << " -> "<< score << "+" << current_score << " -> " << current_score + score;
+                if(type == 1 && a_count < A)
+                    backtrack(current_score + score, a_count+1, b_count, visited, sorted, V, agent_types, recursion_lvl+1);
+                else if(type == 2 && b_count < B)
+                    backtrack(current_score + score, a_count, b_count+1, visited, sorted, V, agent_types, recursion_lvl+1);
+                visited[current_node] = false;
             }
+            agent_types[current_node] = 0;
         }
-        if(type == 0) {
-            a_count--;
-        } else if(type == 1) {
-            b_count--;
-        }
-    }
-    return;
+    }    
 }
 
 void sort_vertices(vector<int> *V, int* degrees) {
@@ -175,7 +153,7 @@ int main() {
 
     for(int i=0; i<N; i++) {
         degrees[i] = 0;
-        agent_types[i] = -1;
+        agent_types[i] = 0;
     }
     for(int e=0; e<M; e++) {
         scanf("%d %d\n", &src, &dist);
@@ -201,9 +179,8 @@ int main() {
     //print_graph(V, N);
     start = high_resolution_clock::now(); 
     best_score = 0;
-    int idx = a[0].second;
-    visited[idx] = true;
-    backtrack(idx, 0, 0, 0, visited, a, adj, agent_types, 0);
+    backtrack(0, 0, 0, visited, a, adj, agent_types, 0);
+    
     stop = high_resolution_clock::now(); 
     duration = duration_cast<milliseconds>(stop - start); 
     cout << "Program ended in " << duration.count() << "ms" << endl; 
