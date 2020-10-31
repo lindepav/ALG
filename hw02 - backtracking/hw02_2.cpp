@@ -14,10 +14,8 @@ uint8_t * agent_types;
 size_t * lookup_table_back, * lookup_table_forward;
 
 size_t getThreshold ( size_t lvl, size_t a, size_t b )
-{     
-    size_t res = 2*(lookup_table_back[lvl + A - a] - lookup_table_back[lvl]) + 
-                    lookup_table_back[N]           - lookup_table_back[lvl + A - a]; 
-    return res;
+{
+    return lookup_table_back[N] - lookup_table_back[lvl] + lookup_table_forward[lvl];
 }
 
 size_t addScore ( size_t lvl )
@@ -41,12 +39,10 @@ void recursion (size_t score, size_t a_count, size_t b_count, size_t lvl)
         return recursion( score + addScore(lvl), a_count + isA, b_count + isB, lvl+1);
     };
 
-    if ( a_count == A && b_count == B ) {
-        if(score > best_score)
-            best_score = score;
-    }
+    if ( a_count == A && b_count == B )
+        best_score = (score > best_score)?score:best_score; 
 
-    if ( lvl == N || score + getThreshold(lvl, a_count, b_count) + score/10 < best_score )
+    if ( lvl == N || score + getThreshold(lvl, a_count, b_count) + score/90 < best_score )
         return;
 
     if ( a_count < A )
@@ -59,11 +55,10 @@ void recursion (size_t score, size_t a_count, size_t b_count, size_t lvl)
 
 int main()
 { 
-    // Prohozene A B kvuli optimalizaci, u pridavani skore nejsou 2 ify navic
     scanf("%lu%lu%lu%lu", &N, &M, &B, &A);
-    graph_back = new vector<uint8_t> [N];//vector<vector<size_t>>(N);
-    graph_forward = new vector<uint8_t> [N];//vector<vector<size_t>>(N); 
-    agent_types = new uint8_t [N];//vector<uint8_t>(N);
+    graph_back = new vector<uint8_t> [N];
+    graph_forward = new vector<uint8_t> [N];
+    agent_types = new uint8_t [N];
     lookup_table_back = new size_t [N+1];
     lookup_table_forward = new size_t [N+1];
     auto add_edge = [](uint8_t u, uint8_t v)->void { graph_forward[min(u,v)].push_back(max(u,v));
