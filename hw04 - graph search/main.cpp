@@ -5,7 +5,7 @@
 #include <limits.h>
  
  
-#define DEFAULT_DISTANCE 9223372036854775807
+#define DEFAULT_DISTANCE INT_MAX
  
 using namespace std; 
 using namespace std::chrono; 
@@ -80,7 +80,7 @@ void Graph::BFS(Field f)
     }
  
     // Set optimal paths for each field
-    long *optimal_dist = new long[T];
+    int *optimal_dist = new int[T];
     for(int i=0; i<T; i++)
         optimal_dist[i] = DEFAULT_DISTANCE;
    
@@ -95,7 +95,6 @@ void Graph::BFS(Field f)
     { 
         // Dequeue a vertex from queue and print it 
         f = queue.front(); 
-        //cout << f.index+1 << " "; 
         queue.pop_front(); 
    
         // Get all adjacent vertices of the dequeued 
@@ -112,17 +111,15 @@ void Graph::BFS(Field f)
  
                 if(types[*i] == g.mark) {
                     if(g.distance <= optimal_dist[g.mark-1]) {
+                        if(g.mark == T) {
+                            cout << g.distance << endl;
+                            return;
+                        }
                         optimal_dist[g.mark-1] = g.distance;
-                        if(g.mark == T)
-                            continue;
-                        //cout << ">M" << g.mark << ":" << g.distance << "< ";
                     }
+                    
                     g.mark = g.mark + 1;
-                }
-                int lastMark = getLastMark(visited[g.index], g.mark);
-                if(lastMark > g.mark && g.distance >= optimal_dist[lastMark-1])
-                    continue;
- 
+                } 
                 queue.push_back(g); 
             } 
         } 
@@ -137,16 +134,13 @@ void Graph::BFS(Field f)
  
 int main(void) 
 {
-    //auto start = high_resolution_clock::now(); 
     int R, S, P, T, start_idx;
     scanf("%d %d %d %d\n", &R, &S, &P, &T);
     //printf("# of rows: %d, # of cols: %d, # of obstacles: %d, # of marks: %d\n---------------------------------------------------\n", R, S, P, T);
-     
  
     int row, col;
     scanf("%d %d\n", &row, &col);
     start_idx = (row - 1) * S + (col - 1);
-    //printf("start index: %d [%d, %d]\n", (R - row) * S + (col - 1) , row, col);
     bool **obstacles = new bool*[R];
     for(int i=0; i<R; ++i) {
         obstacles[i] = new bool[S];
@@ -175,7 +169,6 @@ int main(void)
         scanf("%d\n", &N);
         for(int m=0; m<N; m++) {
             scanf("%d %d\n", &row, &col);
-            //printf("%d %d\n", row, col);
             g.addType(t, row-1, col-1);
         }
     }
@@ -253,11 +246,6 @@ int main(void)
     f.distance = 0;
     f.mark = 1;
     g.BFS(f);
- 
- 
-    /*stop = high_resolution_clock::now(); 
-    duration = duration_cast<milliseconds>(stop - start); 
-    std::cout << "BFS done in " << duration.count() << "ms" << std::endl; */
  
     for(int i=0; i<R; ++i) {
         delete [] arr[i];
