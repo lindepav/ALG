@@ -111,13 +111,13 @@ void Graph::BFS(Field f)
                 g.distance = f.distance + 1;
  
                 if(types[*i] == g.mark) {
-                    if(g.distance < optimal_dist[g.mark-1]) {
+                    if(g.distance <= optimal_dist[g.mark-1]) {
                         optimal_dist[g.mark-1] = g.distance;
                         if(g.mark == T)
                             continue;
                         //cout << ">M" << g.mark << ":" << g.distance << "< ";
-                        g.mark = g.mark + 1;
                     }
+                    g.mark = g.mark + 1;
                 }
                 int lastMark = getLastMark(visited[g.index], g.mark);
                 if(lastMark > g.mark && g.distance >= optimal_dist[lastMark-1])
