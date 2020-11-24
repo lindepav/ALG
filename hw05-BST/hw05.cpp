@@ -319,7 +319,7 @@ int main(void)
     //cout << "\n";
     int R = getCount(root->right);
     //cout << "\n";
-    printf("%d %d %d\n", getHeight(root), L, R);
+    printf("%d %d %d\n", _getHeight(root)-1, L, R);
 
     return 0;
 }
