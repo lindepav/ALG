@@ -1,9 +1,11 @@
 #include <iostream>
 #include <vector>
 #include <math.h>       /* floor */
+#include <queue>
 using namespace std; 
 
 #define COUNT 1
+
 
 class Node  
 {  
@@ -14,6 +16,8 @@ class Node
         Node *left;  
         Node *right;  
 };  
+
+Node* insertion(Node* node, int key);
 
 void printBT(const std::string& prefix, const Node* node, bool isLeft)
 {
@@ -75,11 +79,11 @@ Node* newNode(int key)
     return(node);  
 } 
 
-void inOrder(Node* node, vector<Node*> &nodes) 
+void inOrder(Node* node, vector<int> &nodes) 
 { 
     if(node != NULL) {
         inOrder(node->left, nodes); 
-        nodes.push_back(node); 
+        nodes.push_back(node->key); 
         inOrder(node->right, nodes); 
     }
 }  
@@ -105,48 +109,83 @@ int _getHeight(Node *node)
     return 1 + max(_getHeight(node->left), _getHeight(node->right));
 }
 
-Node* makeBST(vector<Node*> &nodes, int from, int to) 
-{ 
-    if (from > to) 
-        return NULL; 
-  
-    int mid = (from + to + 1) / 2; 
-    Node *node = newNode(nodes[mid]->key);
-    node->key = nodes[mid]->key;
-  
-    node->left  = makeBST(nodes, from, mid-1); 
-    node->right = makeBST(nodes, mid+1, to); 
-
-    // Update the number of vertices in left and right subtree
-    node->count = 1 + _getCount(node->left) + _getCount(node->right);
-    node->height = 1 + max(_getHeight(node->left), _getHeight(node->right));
-  
-    return node; 
-} 
-
-Node* updateCount(Node *node) 
+void deleteTree(Node *node) 
 {
     if(node == NULL)
+        return;
+    deleteTree(node->left);
+    deleteTree(node->right);
+    delete node;
+}
+
+vector<int> splitNodes(vector<int> l, int from, int to) 
+{
+    vector<int> ret;
+    for(int i=from; i<=to; i++) {
+        ret.push_back(l[i]);
+    }
+    return ret;
+}
+
+int getDepth(int verticesCnt)
+{
+    int cnt = 0;
+    while(verticesCnt >= 2) {
+        verticesCnt = verticesCnt / 2;
+        cnt++;
+    }
+    return cnt;
+}
+
+int getRootIndex(vector<int> nodes) 
+{
+    int verticesCnt = (int) nodes.size();
+    int d = getDepth(verticesCnt);
+    int WoLastLayer = (int) pow(2, d) - 1;
+    int lastLayer = verticesCnt - WoLastLayer;
+    int rightSubtree = ((lastLayer / (int) pow(2, d-1)) < 1) ? 0 : (lastLayer - (int) pow(2, d-1));
+    rightSubtree += (int) pow(2, d-1) - 1;
+    return verticesCnt - rightSubtree - 1;
+}
+
+void printNodes(vector<int> nodes) 
+{
+    for(auto node : nodes)
+        cout << node << "->";
+    cout << endl;
+}
+
+Node* makeBalancedTree(vector<int> nodes){
+    if((int)nodes.size() == 1) {
+        Node *node = newNode((int) nodes.at(0));
         return node;
-    // Update the number of vertices in left and right subtree
-    node->count = 1 + _getCount(node->left) + _getCount(node->right);
-    node->height = 1 + max(_getHeight(node->left), _getHeight(node->right));
-    updateCount(node->left);
-    updateCount(node->right);
+    } else if((int)nodes.size() == 0) {
+        return NULL;
+    }
+    int rindex = getRootIndex(nodes);
+    Node *node = newNode((int) nodes.at(rindex));
+    vector<int> leftSubtree = splitNodes(nodes, 0, rindex-1); 
+    vector<int> rightSubtree = splitNodes(nodes, rindex+1, (int) nodes.size()-1); 
+    /*cout << "leftSubtree: ";
+    printNodes(leftSubtree);
+    cout << "rightSubtree: ";
+    printNodes(rightSubtree);
+    cout << endl;*/
+    node->left = makeBalancedTree(leftSubtree);
+    node->right = makeBalancedTree(rightSubtree);
+    node->count = 1 + getCount(node->left) + getCount(node->right);
+    node->height = 1 + max(getHeight(node->left), getHeight(node->right));
     return node;
 }
 
 Node* buildBalancedBST(Node* node) 
 { 
-    vector<Node *> nodes; 
+    vector<int> nodes; 
     inOrder(node, nodes); 
-  
-    int n = nodes.size(); 
-    Node *newNode = makeBST(nodes, 0, n-1); 
+    Node *newNode = makeBalancedTree(nodes);
+    deleteTree(node);    
     /*cout << "\t-------->\n";
     printTree(newNode, 1);
-    cout << "L: " << getCount(newNode->left) << ", R: " << getCount(newNode->right) << endl;
-    newNode = updateCount(newNode);
     cout << "L: " << getCount(newNode->left) << ", R: " << getCount(newNode->right) << endl;*/
     return newNode;
 } 
@@ -170,11 +209,12 @@ Node* insertion(Node* node, int key)
     // Update the number of vertices in left and right subtree
     node->count = 1 + getCount(node->left) + getCount(node->right);
     node->height = 1 + max(getHeight(node->left), getHeight(node->right));
-
     // Check the condition and make a perfect BTS
     if( abs(getCount(node->left) - getCount(node->right)) > floor( (max(getCount(node->left), getCount(node->right)) + 1) / 2) ) {
-        printf("--------------\n");
-        return buildBalancedBST(node);
+        //printf("--------------\n");
+        Node *nNode = buildBalancedBST(node);
+        //printTree(nNode, 1);
+        return nNode;
     }
   
     return node;  
@@ -237,7 +277,7 @@ Node* deletion(Node* node, int key)
 
     // Check the condition and make a perfect BTS
     if( abs(getCount(node->left) - getCount(node->right)) > floor( (max(getCount(node->left), getCount(node->right)) + 1) / 2) ) {
-        printf("--------------\n");
+        //printf("--------------\n");
         return buildBalancedBST(node);
     }
 
@@ -267,18 +307,18 @@ int main(void)
         } else {
             root = insertion(root, operation);
         }
-        printf("%d -> root %d L: %d , R: %d\n", operation, root->key, getCount(root->left), getCount(root->right));
+        //printf("%d -> root %d L: %d , R: %d\n", operation, root->key, getCount(root->left), getCount(root->right));
         //printTree(root, 1);
         //preOrder(root);
     }
     /*printf("\n");
     preOrder(root);
     printf("\n");*/
-    printBT(root);
+    //printBT(root);
     int L = getCount(root->left);
-    cout << "\n";
+    //cout << "\n";
     int R = getCount(root->right);
-    cout << "\n";
+    //cout << "\n";
     printf("%d %d %d\n", getHeight(root), L, R);
 
     return 0;
