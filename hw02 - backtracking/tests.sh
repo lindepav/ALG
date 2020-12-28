@@ -1,0 +1,1 @@
+for file in datapub/*.in; do echo $file; ./a.out < "$file"; cat $(echo $file | sed 's/\(.*\).in/\1.out/'); echo ""; done;

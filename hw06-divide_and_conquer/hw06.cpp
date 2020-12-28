@@ -1,12 +1,14 @@
 #include <iostream>
 #include <climits>
+#include <stdlib.h>
+#include <cmath>
 using namespace std;
 
-int minSubArray(int from, int to, int *arr)
+int minInSubArray(int from, int to, int *arr)
 {
     int curr_min = INT_MAX;
     int curr_min_i = -1;
-    for(int i=from; i<to; i++) {
+    for(int i=from; i<=to; i++) {
         if(arr[i] < curr_min) {
             curr_min = arr[i];
             curr_min_i = i;
@@ -15,11 +17,11 @@ int minSubArray(int from, int to, int *arr)
     return curr_min_i;
 }
 
-int maxSubArray(int from, int to, int *arr)
+int maxInSubArray(int from, int to, int *arr)
 {
-    int curr_max = -1;
+    int curr_max = INT_MIN;
     int curr_max_i = -1;
-    for(int i=from; i<to; i++) {
+    for(int i=from; i<=to; i++) {
         if(arr[i] > curr_max) {
             curr_max = arr[i];
             curr_max_i = i;
@@ -28,13 +30,13 @@ int maxSubArray(int from, int to, int *arr)
     return curr_max_i;
 }
 
-int linearSearch(int from, int to, int n, int *arr) 
+int linearSearch(int from, int to, float n, int *arr) 
 {
-    int difference = INT_MAX;
+    float difference = LONG_MAX;
     int closest_i = -1;
-    for(int i=from; i<to; i++) {
-        if( abs(arr[i] - n) < difference ) {
-            difference = abs(arr[i] - n);
+    for(int i=from+1; i<to; i++) {
+        if( std::abs(float(arr[i]) - (float) n) < difference ) {
+            difference = std::abs(float(arr[i]) - (float) n);
             closest_i = i;
         }
     }
@@ -49,9 +51,9 @@ long maxQuality(int low, int high, int *arr)
     long leftQuality = maxQuality(low, mid, arr);
     long rightQuality = maxQuality(mid+1, high, arr);
 
-    int rightMaxIdx = maxSubArray(mid+1, high, arr);
-    int leftMinIdx = minSubArray(low, mid, arr);
-    int midEstimate = (arr[rightMaxIdx] - arr[leftMinIdx]) / 2 + arr[leftMinIdx];
+    int rightMaxIdx = maxInSubArray(mid+1, high, arr);
+    int leftMinIdx = minInSubArray(low, mid, arr);
+    float midEstimate = (float) ((float)(arr[rightMaxIdx] - (float) arr[leftMinIdx]) / 2) + (float) arr[leftMinIdx];
     int bestMidIdx = linearSearch(leftMinIdx, rightMaxIdx, midEstimate, arr);
 
     long wholeQuality = std::min(arr[bestMidIdx] - arr[leftMinIdx], arr[rightMaxIdx] - arr[bestMidIdx]);

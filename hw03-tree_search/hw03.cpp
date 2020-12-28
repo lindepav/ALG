@@ -67,16 +67,12 @@ pair<bool, bool> search(bool *visited, int current_node) {
                 stations = logAdd(stations, ret);
             }
         }
-        //cout << "#" << current_node+1 << " has extractor? " << stations.first << " and validator? " << stations.second << endl;
         if(isCorrect(stations)) {
-            //printf("#%d found solution.\n", current_node+1);
             correct++;
             stations.first = false;
             stations.second = false;
         }  
         return stations;
-        
-
     }
 }
 

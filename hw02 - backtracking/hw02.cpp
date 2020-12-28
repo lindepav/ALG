@@ -22,14 +22,19 @@ struct comp_decreased {
 };
 
 int N, M, A, B, best_score;
+vector<int> *V;
+int *degrees;
+int *sorted_idxs;
+int *upper_bounds;
+
 
 void add_edge(vector<int> adj[], int u, int v);
 void print_graph(vector<int> adj[], int N);
 void print_sorted_degrees(vector<pair<int,int> > a);
-void backtrack(int current_score, int a_count, int b_count, bool *visited, int *sorted_vertices, int *degrees, vector<int> *V, int *agent_types);
-int get_score(int current_node, bool *visited, vector<int> *V, int type, int *agent_types);
-int get_upper_bound(int a_count, int b_count, bool *visited, vector<pair<int,int> > sorted);
+void backtrack(int *agent_types, int *degrees_sums, int current_score, int a_count, int b_count, int recursion_lvl);
+int get_score(int *agent_types, bool *visited, int current_node, int type);
 void sort_vertices(vector<int> *V, int* degrees);
+int get_initial_score();
 
 void add_edge(vector<int> adj[], int u, int v) {
     adj[u].push_back(v); 
@@ -53,89 +58,127 @@ void print_sorted_degrees(vector<pair<int,int> > a) {
     }
 }
 
-int get_score(int current_node, bool *visited, vector<int> *V, int type, int *agent_types) {
-    int reward_a[3] = {0, 1, 0}; 
-    int reward_b[3] = {0, 0, 1}; 
-    int diffs[3] = {0, 1, -1};
+int get_score(int *agent_types, bool *visited, int current_node, int type) {
     int new_count = 0;
     int dif = 0;
     
     /* getting new rewards */
     for (int nidx : V[current_node]) {
         if(!visited[nidx]) {
-            new_count = new_count + reward_b[type];
+            if(type == 2) 
+                new_count++;
         } else {
-            new_count = new_count + reward_a[type];
-            dif = dif + diffs[agent_types[nidx]];
+            if(type == 1)
+                new_count++;
+            if(agent_types[nidx] == 1)
+                dif++;
+            else if(agent_types[nidx] == 2)
+                dif--;
         }
     }
 
     return new_count + dif;
 }
 
-int get_upper_bound(int a_count, int b_count, bool *visited, int *sorted, int *degrees) {
-    int sum = 0;
+int count_score(int v, int degree, int type) {
+    if(type == 1) 
+        return 2 * degree; 
+    return degree;
+}
+
+bool randomBool() {
+    return 0 + (rand() % (1 - 0 + 1)) == 1;
+}
+
+int get_initial_score() {
+    int a=0, b=0, score=0;
+    int *types = new int[30];
+    bool *visit = new bool[30];
     for(int i=0; i<N; i++) {
-        if(!visited[sorted[i]]) {
+        types[i] = 0;
+        visit[i] = false;
+    }
+
+    for(int i=0; i<N; i++) {
+        int idx = sorted_idxs[i];
+        visit[idx] = true;
+        if(a != A) {
+            types[idx] = 1;
+            score = score + get_score(types, visit, idx, 1);
+            a++;
+        } else if(b != B) {
+            types[idx] = 2;
+            score = score + get_score(types, visit, idx, 2);
+            b++;
+        }
+    } 
+    free(types);
+    free(visit);
+    return score;
+}
+
+int get_upper_bound(int a_count, int b_count, int *agent_types, vector<pair<int,int> > sorted) {
+    int sum = 0;
+    for(pair<int, int> vertex : sorted) {
+        int degree = vertex.first;
+        if(agent_types[vertex.second] > 0) {
             if(a_count >= A) {
                 if(b_count >= B) {
                     return sum;
                 } else {
                     b_count++;
-                    sum = sum + degrees[sorted[i]];
+                    sum = sum + degree;
                 }
             } else {
                 a_count++;
-                sum = sum + 2 * degrees[sorted[i]];
+                sum = sum + 2 * degree;
             }
         }
     }
     return sum;
 }
 
-void backtrack(int current_score, int a_count, int b_count, bool *visited, int *sorted_vertices, int *degrees, vector<int> *V, int *agent_types) {
-    if(current_score > best_score) {
-        best_score = current_score;
-        cout << current_score << "\n";
-    }
+void backtrack(int *agent_types, int *degrees_sums, int current_score, int a_count, int b_count, int recursion_lvl) {
     /* STOP CONDITION */
-    if(a_count >= A && b_count >= B) {
+    if(a_count == A && b_count == B) {
+        if(current_score > best_score) {
+            best_score = current_score;
+        }
         return;
     }
 
     /* PRUNING */
-    int bound = get_upper_bound(a_count, b_count, visited, sorted_vertices, degrees);
-    if(current_score + bound <= best_score) {
+    if (best_score > current_score + 2*(degrees_sums[recursion_lvl] - degrees_sums[recursion_lvl + (A-a_count)]) + (degrees_sums[recursion_lvl + (A-a_count)] - degrees_sums[recursion_lvl + (A-a_count) + (B-b_count)])) {
         return;
     }
+      
+    /* BACKTRACKING */
+    int indx = sorted_idxs[recursion_lvl];
+    if(a_count != A) {
+        agent_types[indx] = 1;
+        int new_score = 0;
+        for (int nidx : V[indx])
+            if (agent_types[nidx] == 1)
+                new_score += 2;
+        backtrack(agent_types, degrees_sums, current_score + new_score, a_count+1, b_count, recursion_lvl+1);
+        agent_types[indx] = 0;
+    }
+    if(b_count != B) {
+        agent_types[indx] = 2;
+        int new_score = 0;;
+        for (int nidx : V[indx])
+            if (agent_types[nidx] == 2)
+                new_score--;
+            else
+                new_score++;
+        backtrack(agent_types, degrees_sums, current_score + new_score, a_count, b_count+1, recursion_lvl+1);
+        agent_types[indx] = 0;
+    }
+    if(N - recursion_lvl - 1 >= A - a_count + B - b_count) {
+        backtrack(agent_types, degrees_sums, current_score, a_count, b_count, recursion_lvl+1);
+    }
 
-    // assign agent types to nodes or not
-    for(int i=0; i<N; i++) {
-        if(!visited[sorted_vertices[i]]) {
-            agent_types[sorted_vertices[i]] = 1;
-            visited[sorted_vertices[i]] = true;
-            int score = get_score(sorted_vertices[i], visited, V, 1, agent_types);  //TODO: lze udelat optimalneji
-            //cout << "\n" << std::string(2*recursion_lvl, ' ')  << "#" << current_node+1 << "(T" << type << "): " << current_score << " -> "<< score << "+" << current_score << " -> " << current_score + score;
-            if(a_count < A) {
-                backtrack(current_score + score, a_count+1, b_count, visited, sorted_vertices, degrees, V, agent_types);
-            } 
-            visited[sorted_vertices[i]] = false;
-            agent_types[sorted_vertices[i]] = 0;
-        }
-    } 
-    for(int i=0; i<N; i++) {
-        if(!visited[sorted_vertices[i]]) {
-            agent_types[sorted_vertices[i]] = 2;
-            visited[sorted_vertices[i]] = true;
-            int score = get_score(sorted_vertices[i], visited, V, 2, agent_types);  //TODO: lze udelat optimalneji
-            //cout << "\n" << std::string(2*recursion_lvl, ' ')  << "#" << current_node+1 << "(T" << type << "): " << current_score << " -> "<< score << "+" << current_score << " -> " << current_score + score;
-            if(b_count < B) {
-                backtrack(current_score + score, a_count, b_count+1, visited, sorted_vertices, degrees, V, agent_types);
-            }
-            visited[sorted_vertices[i]] = false;
-            agent_types[sorted_vertices[i]] = 0;
-        }
-    }   
+    return;
 }
 
 void sort_vertices(vector<int> *V, int* degrees) {
@@ -156,21 +199,22 @@ void sort_vertices(vector<int> *V, int* degrees) {
 
 int main() { 
     scanf("%d %d %d %d\n", &N, &M, &A, &B);
-    //printf("N= %d, M= %d, A= %d, B= %d\n-----------------------\n", N, M, A, B);
-    vector<int> *adj = new vector<int>[N];
+    V = new vector<int>[N];
     int *agent_types = new int[30];
     bool *visited = new bool [30];
+    upper_bounds = new int[30];
     int src, dist;
-    int *degrees = new int[30];
-   // auto start = high_resolution_clock::now(); 
+    degrees = new int[30];
+    auto start = high_resolution_clock::now(); 
 
     for(int i=0; i<N; i++) {
         degrees[i] = 0;
         agent_types[i] = 0;
+        upper_bounds[i] = 0;
     }
     for(int e=0; e<M; e++) {
         scanf("%d %d\n", &src, &dist);
-        add_edge(adj, src-1, dist-1); 
+        add_edge(V, src-1, dist-1); 
         degrees[src-1]++;
         degrees[dist-1]++;
     }
@@ -185,28 +229,41 @@ int main() {
     
     sort(decreased.begin(), decreased.end(), comp_decreased());
     sort(increased.begin(), increased.end(), comp());
-    int *increased_idxs = new int[N];
+    sorted_idxs = new int[N];
     for(int i=0; i<N; i++) {
-        increased_idxs[i] = increased.at(i).second;
+        sorted_idxs[i] = increased.at(i).second;
     }
+
+
     //print_sorted_degrees(a);
-    //print_graph(adj, N);
-    //sort_vertices(adj, degrees);
-    /*auto stop = high_resolution_clock::now(); 
+    //print_graph(V, N);
+    auto stop = high_resolution_clock::now(); 
     auto duration = duration_cast<milliseconds>(stop - start); 
-    cout << "Vertices sorted in " << duration.count() << "ms" << endl; */
     for(int i=0; i<N; i++)
         visited[i] = false;
-    //print_graph(adj, N);
     //print_graph(V, N);
-    //start = high_resolution_clock::now(); 
-    best_score = 0;
-    backtrack(0, 0, 0, visited, increased_idxs, degrees, adj, agent_types);
-    
-    /*stop = high_resolution_clock::now(); 
-    duration = duration_cast<milliseconds>(stop - start); 
-    cout << "Program ended in " << duration.count() << "ms" << endl; */
+    int initial_score = get_initial_score();
+    //int initial_score = 0;
 
+    start = high_resolution_clock::now(); 
+    best_score = initial_score;
+
+    int *degrees_sums = new int[N+1];
+    for (int i = N - 1; i >= 0; i--)
+        degrees_sums[i] = degrees_sums[i+1] + degrees[i];
+
+    backtrack(agent_types, degrees_sums, 0, 0, 0, 0);
+
+
+    
+    stop = high_resolution_clock::now(); 
+    duration = duration_cast<milliseconds>(stop - start); 
+    cout << "Program ended in " << duration.count() << "ms" << endl; 
+    /*free(V);
+    free(agent_types);
+    free(visited);
+    free(degrees);
+    free(increased_idxs);*/
 
     printf("%d\n", best_score);
     return 0; 

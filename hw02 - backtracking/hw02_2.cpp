@@ -40,9 +40,9 @@ void recursion (size_t score, size_t a_count, size_t b_count, size_t lvl)
     };
 
     if ( a_count == A && b_count == B )
-        best_score = (score > best_score)?score:best_score; 
+        best_score = (score > best_score) ? score : best_score; 
 
-    if ( lvl == N || score + getThreshold(lvl, a_count, b_count) + score/90 < best_score )
+    if ( lvl == N || score + getThreshold(lvl, a_count, b_count) + score / 90 < best_score )
         return;
 
     if ( a_count < A )
