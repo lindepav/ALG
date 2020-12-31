@@ -20,32 +20,6 @@ void printTable(int **S)
     cout << "--------------" << endl;
 }
 
-int getProfit(int **acc, int i, int k) 
-{
-    int best_profit = INT_MIN;
-    for(int j=i; j<k; j++) {
-        int S1 = acc[i][j];
-        int S2 = acc[j+1][k];
-        int S_min = min(S1, S2);
-        int S_max = max(S1, S2);
-        int profit = 0;
-        if(S_min < 0 && S_max > 0) {
-            int S = min(abs(S_min), abs(S_max));
-            int L = k - i;
-            if(S > L)  
-                profit = S - L;
-        } 
-        profit -= C;
-        int leftProfit = (i != j) ? getProfit(acc, i, j) : 0;
-        int rightProfit = (j+1 != k) ? getProfit(acc, j+1, k) : 0;
-        profit += leftProfit + rightProfit;
-        if(profit > best_profit) {
-            best_profit = profit;
-        }
-    }
-    return best_profit;
-}
-
 int calculateImmediateProfit(int **acc, int i, int j, int k) 
 {
     int S1 = acc[i][j];
@@ -70,7 +44,6 @@ int main(void)
     for(int i=0; i<N; i++) {
         scanf("%d", &P[i]);
     }
-    //cout << "H " << H-1 << endl;
     int **acc = new int*[N];
     for(int i=0; i<N; i++)
         acc[i] = new int[N];
@@ -87,7 +60,6 @@ int main(void)
             acc[i][j] = acc[i][j-1] + acc[j][j];
         }
     }
-    //printTable(acc);
     H--;
     int **profits = new int*[N];
     for(int i=0; i<N; i++) 
@@ -118,14 +90,16 @@ int main(void)
             i++; k++;
         }
     }
-
     //printTable(profits);
     int bestProfit = INT_MIN;
     for(int i=0; i<N; i++) {
         for(int k=0; k<N; k++) {
-            int profit = profits[i][k];
-            if(profit > bestProfit)
-                bestProfit = profit;
+            if(i <= H && H <= k) {
+                int profit = profits[i][k];
+                if(profit > bestProfit) {
+                    bestProfit = profit;
+                }
+            }
         }
     }
     cout << bestProfit << endl;
